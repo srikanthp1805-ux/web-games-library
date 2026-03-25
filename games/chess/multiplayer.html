@@ -260,6 +260,20 @@ function toNotation(b,m){
 let peer=null, conn=null, mySide=null;
 let connectTimer=null;
 
+// TURN servers ensure connection works across all firewalls/NAT
+const PEER_CFG = {
+  debug: 0,
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'turn:openrelay.metered.ca:80',       username:'openrelayproject', credential:'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443',      username:'openrelayproject', credential:'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username:'openrelayproject', credential:'openrelayproject' }
+    ]
+  }
+};
+
 function setLobbyStatus(msg, cls=''){
   const el=document.getElementById('conn-status');
   el.innerHTML=msg; el.className=cls;
@@ -272,7 +286,7 @@ function hostGame(){
   document.getElementById('btn-host').disabled=true;
   setLobbyStatus('<span class="spinner"></span>Setting up room…');
 
-  peer = new Peer(undefined, {debug:0});
+  peer = new Peer(undefined, PEER_CFG);
 
   peer.on('open', id => {
     const base = window.location.href.split('?')[0];
@@ -328,18 +342,27 @@ function doJoin(peerId){
   document.getElementById('join-input').disabled=true;
   setLobbyStatus('<span class="spinner"></span>Connecting to host…');
 
-  peer = new Peer(undefined, {debug:0});
+  peer = new Peer(undefined, PEER_CFG);
 
   peer.on('open', () => {
-    conn = peer.connect(peerId, {reliable:true, serialization:'json'});
+    conn = peer.connect(peerId, {reliable:true});
 
-    // Timeout: if not open in 20 seconds something is wrong
+    setLobbyStatus('<span class="spinner"></span>Reaching host… (this can take up to 30s)');
+
+    // Step 1: after 10s still not open, show reassurance
+    const halfway = setTimeout(()=>{
+      if(!conn || !conn.open)
+        setLobbyStatus('<span class="spinner"></span>Still trying… Make sure host page is open.','info');
+    }, 10000);
+
+    // Timeout: if not open in 30 seconds
     connectTimer = setTimeout(()=>{
       if(!conn || !conn.open){
-        setLobbyStatus('❌ Timed out. Make sure the host has the page open and try again.','err');
+        clearTimeout(halfway);
+        setLobbyStatus('❌ Timed out. Ask host to click "Create Room" again and send a new link.','err');
         showRetry();
       }
-    }, 20000);
+    }, 30000);
 
     conn.on('open', ()=>{
       clearTimeout(connectTimer);
