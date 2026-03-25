@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Srikanth's Web Games Library</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#1a1a2e;font-family:'Segoe UI',sans-serif;color:#eee;min-height:100vh}
+  header{background:#12122a;border-bottom:2px solid #f0c040;padding:24px 40px;display:flex;align-items:center;justify-content:space-between}
+  header h1{font-size:1.8rem;color:#f0c040;letter-spacing:2px}
+  header p{color:#888;font-size:.9rem}
+  .subtitle{color:#aaa;font-size:.95rem}
+  main{max-width:1000px;margin:40px auto;padding:0 24px}
+  .section-title{font-size:1.1rem;color:#f0c040;border-bottom:1px solid #333;padding-bottom:8px;margin-bottom:24px;letter-spacing:1px}
+  .games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px}
+  .card{background:#12122a;border-radius:14px;border:1px solid #2a2a4e;overflow:hidden;transition:transform .2s,border-color .2s;text-decoration:none;display:block}
+  .card:hover{transform:translateY(-4px);border-color:#f0c040}
+  .card-thumb{height:120px;display:flex;align-items:center;justify-content:center;font-size:4rem;background:#0d0d1e}
+  .card-body{padding:16px}
+  .card-title{font-size:1.1rem;font-weight:bold;color:#f0c040;margin-bottom:6px}
+  .card-desc{font-size:.85rem;color:#aaa;line-height:1.5;margin-bottom:12px}
+  .card-tags{display:flex;gap:6px;flex-wrap:wrap}
+  .tag{background:#1e1e3e;color:#a0d0ff;font-size:.72rem;padding:3px 8px;border-radius:4px}
+  .tag.green{background:#1e3a1e;color:#6f6}
+  .tag.yellow{background:#3a3010;color:#f0c040}
+  .coming-soon{opacity:.5;pointer-events:none}
+  .coming-soon .card-thumb{filter:grayscale(1)}
+  .badge{background:#f0c040;color:#1a1a2e;font-size:.7rem;font-weight:bold;padding:2px 7px;border-radius:10px;margin-left:8px}
+  footer{text-align:center;padding:40px;color:#444;font-size:.8rem;margin-top:40px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🎮 Web Games Library</h1>
+    <p class="subtitle">Browser-based games — no install needed</p>
+  </div>
+  <div style="color:#555;font-size:.85rem">by srikanthp1805-ux</div>
+</header>
+
+<main>
+  <div class="section-title">🕹 Available Games</div>
+  <div class="games-grid">
+
+    <!-- Chess -->
+    <a class="card" href="games/chess/index.html">
+      <div class="card-thumb">♟</div>
+      <div class="card-body">
+        <div class="card-title">Chess <span class="badge">2 modes</span></div>
+        <div class="card-desc">Classic chess with full rules — castling, en passant, pawn promotion, check &amp; checkmate detection. Play solo against an AI or challenge a friend online.</div>
+        <div class="card-tags">
+          <span class="tag green">vs AI</span>
+          <span class="tag green">2-Player Online</span>
+          <span class="tag">Strategy</span>
+          <span class="tag">Turn-based</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Placeholder: Tic Tac Toe -->
+    <div class="card coming-soon">
+      <div class="card-thumb">⭕</div>
+      <div class="card-body">
+        <div class="card-title">Tic Tac Toe <span class="badge" style="background:#555;color:#aaa">Soon</span></div>
+        <div class="card-desc">Classic 3×3 and extended 5×5 Tic Tac Toe. Play vs AI or a friend online.</div>
+        <div class="card-tags"><span class="tag">vs AI</span><span class="tag">2-Player</span><span class="tag">Classic</span></div>
+      </div>
+    </div>
+
+    <!-- Placeholder: Wordle -->
+    <div class="card coming-soon">
+      <div class="card-thumb">🔤</div>
+      <div class="card-body">
+        <div class="card-title">Wordle <span class="badge" style="background:#555;color:#aaa">Soon</span></div>
+        <div class="card-desc">Guess the 5-letter word in 6 tries. Daily challenge and unlimited free-play modes.</div>
+        <div class="card-tags"><span class="tag">Word</span><span class="tag">Puzzle</span><span class="tag">Daily</span></div>
+      </div>
+    </div>
+
+    <!-- Placeholder: Snake -->
+    <div class="card coming-soon">
+      <div class="card-thumb">🐍</div>
+      <div class="card-body">
+        <div class="card-title">Snake <span class="badge" style="background:#555;color:#aaa">Soon</span></div>
+        <div class="card-desc">The iconic snake game with smooth controls, speed levels, and high-score tracking.</div>
+        <div class="card-tags"><span class="tag">Arcade</span><span class="tag">Single Player</span></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  Built with vanilla HTML · CSS · JavaScript &nbsp;|&nbsp;
+  <a href="https://github.com/srikanthp1805-ux/web-games-library" style="color:#f0c040;text-decoration:none">View on GitHub</a>
+</footer>
+</body>
+</html>

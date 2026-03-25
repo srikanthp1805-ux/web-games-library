@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess – Web Games Library</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#1a1a2e;font-family:'Segoe UI',sans-serif;color:#eee;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px}
+  .back{position:fixed;top:20px;left:20px;color:#f0c040;text-decoration:none;font-size:.9rem;opacity:.7}
+  .back:hover{opacity:1}
+  h1{font-size:2.5rem;color:#f0c040;margin-bottom:8px;text-align:center}
+  .desc{color:#888;font-size:.95rem;margin-bottom:40px;text-align:center;max-width:500px;line-height:1.6}
+  .modes{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}
+  .mode-card{background:#12122a;border:2px solid #2a2a4e;border-radius:16px;padding:32px 28px;width:260px;display:flex;flex-direction:column;align-items:center;gap:14px;text-decoration:none;transition:transform .2s,border-color .2s}
+  .mode-card:hover{transform:translateY(-6px);border-color:#f0c040}
+  .mode-icon{font-size:3.5rem}
+  .mode-title{font-size:1.2rem;font-weight:bold;color:#f0c040}
+  .mode-desc{font-size:.85rem;color:#aaa;text-align:center;line-height:1.5}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+  .tag{background:#1e1e3e;color:#a0d0ff;font-size:.72rem;padding:3px 8px;border-radius:4px}
+  .tag.g{background:#1e3a1e;color:#6f6}
+</style>
+</head>
+<body>
+<a class="back" href="../../index.html">← Back to Library</a>
+<h1>♟ Chess</h1>
+<p class="desc">Full-featured chess with all standard rules — castling, en passant, pawn promotion, check, checkmate, and stalemate. Choose your mode below.</p>
+<div class="modes">
+  <a class="mode-card" href="solo.html">
+    <div class="mode-icon">🤖</div>
+    <div class="mode-title">vs Computer</div>
+    <div class="mode-desc">Play against an AI with 4 difficulty levels — from Easy to Expert. Uses minimax with alpha-beta pruning.</div>
+    <div class="tags">
+      <span class="tag g">Single Player</span>
+      <span class="tag">AI Opponent</span>
+      <span class="tag">4 Levels</span>
+    </div>
+  </a>
+  <a class="mode-card" href="multiplayer.html">
+    <div class="mode-icon">🌐</div>
+    <div class="mode-title">2-Player Online</div>
+    <div class="mode-desc">Challenge a friend in real-time. One player hosts, the other joins with a 6-letter room code. No account needed.</div>
+    <div class="tags">
+      <span class="tag g">2 Players</span>
+      <span class="tag">Online</span>
+      <span class="tag">Peer-to-Peer</span>
+      <span class="tag">Chat</span>
+    </div>
+  </a>
+</div>
+</body>
+</html>
