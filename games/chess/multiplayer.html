@@ -4,51 +4,45 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chess – 2 Player Online</title>
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Segoe UI',sans-serif;color:#eee}
   h1{margin-bottom:10px;font-size:1.8rem;letter-spacing:2px;color:#f0c040}
 
-  /* ── Lobby ── */
   #lobby{display:flex;flex-direction:column;align-items:center;gap:16px;padding:36px;background:#12122a;border-radius:16px;border:2px solid #f0c040;max-width:460px;width:92%}
   #lobby h2{color:#f0c040;font-size:1.3rem}
   #lobby p{color:#aaa;font-size:.9rem;text-align:center;line-height:1.5}
   .lobby-section{width:100%;display:flex;flex-direction:column;gap:10px;padding:16px;background:#1e1e3e;border-radius:10px}
   .lobby-section h3{font-size:1rem;color:#a0d0ff;margin-bottom:2px}
-  .lobby-section p{font-size:.82rem;color:#777;text-align:left}
+  .lobby-section p{font-size:.82rem;color:#777}
   input{padding:10px 12px;border-radius:6px;border:1px solid #444;background:#0d0d1e;color:#eee;font-size:1rem;width:100%}
   input::placeholder{color:#555}
-
-  .share-link{font-size:.78rem;word-break:break-all;color:#a0d0ff;background:#0d0d1e;padding:10px;border-radius:6px;line-height:1.5;min-height:40px}
+  .share-link{font-size:.78rem;word-break:break-all;color:#a0d0ff;background:#0d0d1e;padding:10px;border-radius:6px;line-height:1.5;min-height:40px;user-select:all}
   #conn-status{font-size:.9rem;color:#888;text-align:center;min-height:20px}
   #conn-status.ok{color:#6f6}
   #conn-status.err{color:#f66}
   #conn-status.info{color:#f0c040}
 
-  /* ── Buttons ── */
   button{padding:10px 18px;border:none;border-radius:6px;background:#f0c040;color:#1a1a2e;font-size:.95rem;font-weight:bold;cursor:pointer;transition:background .2s;width:100%}
   button:hover{background:#ffd700}
   button:disabled{background:#333;color:#666;cursor:not-allowed}
   .btn-outline{background:transparent;border:2px solid #f0c040;color:#f0c040}
   .btn-outline:hover{background:#f0c04022}
-  .btn-danger{background:#8b2222;color:#eee}
-  .btn-danger:hover{background:#b22222}
 
-  /* ── Spinner ── */
-  .spinner{display:inline-block;width:16px;height:16px;border:2px solid #555;border-top-color:#f0c040;border-radius:50%;animation:spin .8s linear infinite;margin-right:6px;vertical-align:middle}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid #555;border-top-color:#f0c040;border-radius:50%;animation:spin .8s linear infinite;margin-right:6px;vertical-align:middle}
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  /* ── Game ── */
   #game{display:none;flex-direction:column;align-items:center;gap:10px}
   #game-top{display:flex;gap:20px;align-items:flex-start}
   #status{font-size:1.1rem;min-height:28px;color:#a0d0ff;font-weight:bold;text-align:center;padding:0 8px}
-  #player-info{display:flex;justify-content:space-between;width:480px;font-size:.85rem;color:#aaa}
+  #player-info{display:flex;justify-content:space-between;width:480px;font-size:.85rem}
   .player-tag{padding:4px 10px;border-radius:4px;font-weight:bold}
   .player-tag.you{background:#1e3a1e;color:#6f6}
   .player-tag.opp{background:#3a1e1e;color:#f88}
 
-  /* ── Board ── */
   #board-outer{display:flex;align-items:stretch}
   .rank-labels{display:flex;flex-direction:column;justify-content:space-around;padding-right:4px;font-size:.75rem;color:#888;width:18px}
   .file-labels{display:flex;justify-content:space-around;margin-left:18px;font-size:.75rem;color:#888;width:480px}
@@ -63,7 +57,6 @@
   .cell.last-move{background:rgba(255,220,0,.45)!important}
   .cell.no-move{cursor:default}
 
-  /* ── Sidebar ── */
   #sidebar{display:flex;flex-direction:column;gap:10px;width:160px}
   #captured{font-size:.8rem;color:#ccc}
   #captured div{margin:4px 0}
@@ -78,11 +71,10 @@
   #chat-input{padding:4px 6px;font-size:.8rem;flex:1;width:0}
   #chat-send{padding:4px 8px;font-size:.8rem;width:auto}
 
-  /* ── Promo modal ── */
   #promo-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);align-items:center;justify-content:center;z-index:10}
   #promo-modal.show{display:flex}
   #promo-box{background:#2a2a4e;border-radius:12px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:12px}
-  #promo-box p{font-size:1rem;color:#f0c040}
+  #promo-box p{color:#f0c040}
   #promo-choices{display:flex;gap:12px}
   .promo-piece{font-size:3rem;cursor:pointer;width:64px;height:64px;display:flex;align-items:center;justify-content:center;background:#f0d9b5;border-radius:8px;transition:transform .1s}
   .promo-piece:hover{transform:scale(1.15);background:#ffd700}
@@ -95,16 +87,15 @@
 <a id="back-link" href="index.html">← Back</a>
 <h1>♟ Chess Online</h1>
 
-<!-- ── LOBBY ── -->
 <div id="lobby">
   <h2>2-Player Chess</h2>
 
   <div class="lobby-section">
-    <h3>Host a Game &nbsp;<small style="color:#888;font-weight:normal;font-size:.8rem">(you play White ♔)</small></h3>
+    <h3>Host a Game <small style="color:#888;font-weight:normal;font-size:.8rem">(you play White ♔)</small></h3>
     <p>Create a room and share the link with your friend.</p>
     <button id="btn-host" onclick="hostGame()">Create Room</button>
-    <div id="host-area" style="display:none;display:flex;flex-direction:column;gap:8px">
-      <div class="share-link" id="share-link-display">Generating link…</div>
+    <div id="host-area" style="display:none;flex-direction:column;gap:8px">
+      <div class="share-link" id="share-link-display"></div>
       <button class="btn-outline" onclick="copyLink()">📋 Copy Invite Link</button>
     </div>
   </div>
@@ -112,21 +103,19 @@
   <div style="color:#555;font-size:.8rem;text-align:center">— or —</div>
 
   <div class="lobby-section">
-    <h3>Join a Game &nbsp;<small style="color:#888;font-weight:normal;font-size:.8rem">(you play Black ♚)</small></h3>
-    <p>Paste the invite link your friend shared, or just open their link directly.</p>
+    <h3>Join a Game <small style="color:#888;font-weight:normal;font-size:.8rem">(you play Black ♚)</small></h3>
+    <p>Paste the invite link or open it directly.</p>
     <input id="join-input" type="text" placeholder="Paste invite link here…">
     <button id="btn-join" onclick="joinFromInput()">Join Game</button>
   </div>
 
   <div id="conn-status"></div>
-  <button id="btn-retry" style="display:none;max-width:200px" class="btn-danger" onclick="location.reload()">↺ Try Again</button>
 </div>
 
-<!-- ── GAME ── -->
 <div id="game">
   <div id="player-info">
     <span class="player-tag you" id="tag-you">You (White ♔)</span>
-    <span id="status">Waiting…</span>
+    <span id="status">…</span>
     <span class="player-tag opp" id="tag-opp">Friend (Black ♚)</span>
   </div>
   <div id="game-top">
@@ -160,7 +149,6 @@
   </div>
 </div>
 
-<!-- ── PROMO MODAL ── -->
 <div id="promo-modal">
   <div id="promo-box">
     <p>Promote pawn to:</p>
@@ -169,9 +157,25 @@
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════
+//  FIREBASE CONFIG — paste yours here
+// ═══════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyCYy7YYw2iOLBeZqwTnHsgcdfDscH_orb0",
+  authDomain: "chess-game-3f508.firebaseapp.com",
+  databaseURL: "https://chess-game-3f508-default-rtdb.firebaseio.com",
+  projectId: "chess-game-3f508",
+  storageBucket: "chess-game-3f508.firebasestorage.app",
+  messagingSenderId: "169098990867",
+  appId: "1:169098990867:web:5bfdb291bb7fb2f7c436e6"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ═══════════════════════════════════════
 //  CHESS ENGINE
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════
 const W=1,B=-1;
 const PAWN=1,KNIGHT=2,BISHOP=3,ROOK=4,QUEEN=5,KING=6;
 const UNICODE={[W*KING]:'♔',[W*QUEEN]:'♕',[W*ROOK]:'♖',[W*BISHOP]:'♗',[W*KNIGHT]:'♘',[W*PAWN]:'♙',[B*KING]:'♚',[B*QUEEN]:'♛',[B*ROOK]:'♜',[B*BISHOP]:'♝',[B*KNIGHT]:'♞',[B*PAWN]:'♟'};
@@ -186,12 +190,12 @@ function cloneCastle(cr){return{W:{k:cr.W.k,q:cr.W.q},B:{k:cr.B.k,q:cr.B.q}}}
 function rawMoves(b,r,c,ep){
   const p=b[r][c];if(!p)return[];
   const s=side(p),t=Math.abs(p),moves=[];
-  const add=(tr,tc,flags={})=>{if(inBounds(tr,tc)&&side(b[tr][tc])!==s)moves.push({fr:r,fc:c,tr,tc,...flags})};
+  const add=(tr,tc,f={})=>{if(inBounds(tr,tc)&&side(b[tr][tc])!==s)moves.push({fr:r,fc:c,tr,tc,...f})};
   if(t===PAWN){
-    const dir=s===W?-1:1,startRow=s===W?6:1;
+    const dir=s===W?-1:1,sr=s===W?6:1;
     if(inBounds(r+dir,c)&&b[r+dir][c]===0){
       moves.push({fr:r,fc:c,tr:r+dir,tc:c});
-      if(r===startRow&&b[r+2*dir][c]===0)moves.push({fr:r,fc:c,tr:r+2*dir,tc:c,doublePawn:true});
+      if(r===sr&&b[r+2*dir][c]===0)moves.push({fr:r,fc:c,tr:r+2*dir,tc:c,doublePawn:true});
     }
     for(const dc of[-1,1])if(inBounds(r+dir,c+dc)){
       if(side(b[r+dir][c+dc])===-s)moves.push({fr:r,fc:c,tr:r+dir,tc:c+dc});
@@ -207,12 +211,10 @@ function rawMoves(b,r,c,ep){
   if(t===KING)steps([[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]);
   return moves;
 }
-
 function allRawMoves(b,s,ep){const m=[];for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(side(b[r][c])===s)m.push(...rawMoves(b,r,c,ep));return m}
-function isAttacked(b,r,c,bySide){return allRawMoves(b,bySide,null).some(m=>m.tr===r&&m.tc===c)}
+function isAttacked(b,r,c,by){return allRawMoves(b,by,null).some(m=>m.tr===r&&m.tc===c)}
 function findKing(b,s){for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(b[r][c]===s*KING)return[r,c];return null}
 function inCheck(b,s){const k=findKing(b,s);return k?isAttacked(b,k[0],k[1],-s):false}
-
 function applyMove(b,m){
   const nb=cloneBoard(b);
   nb[m.tr][m.tc]=nb[m.fr][m.fc];nb[m.fr][m.fc]=0;
@@ -221,208 +223,138 @@ function applyMove(b,m){
   if(m.promo)nb[m.tr][m.tc]=side(nb[m.tr][m.tc])*m.promo;
   return nb;
 }
-
 function legalMoves(b,r,c,cr,ep){
   const p=b[r][c];if(!p)return[];
   const s=side(p);let moves=rawMoves(b,r,c,ep);
   if(Math.abs(p)===KING){
-    const row=s===W?7:0;
+    const row=s===W?7:0,sk=s===W?'W':'B';
     if(r===row&&c===4){
-      const sk=s===W?'W':'B';
       if(cr[sk].k&&b[row][5]===0&&b[row][6]===0&&!isAttacked(b,row,4,-s)&&!isAttacked(b,row,5,-s)&&!isAttacked(b,row,6,-s))moves.push({fr:row,fc:4,tr:row,tc:6,castle:'k'});
       if(cr[sk].q&&b[row][3]===0&&b[row][2]===0&&b[row][1]===0&&!isAttacked(b,row,4,-s)&&!isAttacked(b,row,3,-s)&&!isAttacked(b,row,2,-s))moves.push({fr:row,fc:4,tr:row,tc:2,castle:'q'});
     }
   }
-  moves=moves.filter(m=>{const nb=applyMove(b,m);return!inCheck(nb,s)});
-  const promoRow=s===W?0:7;
-  moves=moves.flatMap(m=>{if(Math.abs(p)===PAWN&&m.tr===promoRow)return[QUEEN,ROOK,BISHOP,KNIGHT].map(pt=>({...m,promo:pt}));return[m]});
-  return moves;
+  moves=moves.filter(m=>!inCheck(applyMove(b,m),s));
+  const pr=s===W?0:7;
+  return moves.flatMap(m=>Math.abs(p)===PAWN&&m.tr===pr?[QUEEN,ROOK,BISHOP,KNIGHT].map(pt=>({...m,promo:pt})):[m]);
 }
-
 function allLegalMoves(b,s,cr,ep){const m=[];for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(side(b[r][c])===s)m.push(...legalMoves(b,r,c,cr,ep));return m}
-
 function updateCastle(cr,m,b){
   const nc=cloneCastle(cr),p=b[m.fr][m.fc];
   if(Math.abs(p)===KING){nc[p>0?'W':'B'].k=false;nc[p>0?'W':'B'].q=false}
   if(Math.abs(p)===ROOK){if(m.fr===7&&m.fc===7)nc.W.k=false;if(m.fr===7&&m.fc===0)nc.W.q=false;if(m.fr===0&&m.fc===7)nc.B.k=false;if(m.fr===0&&m.fc===0)nc.B.q=false}
   return nc;
 }
-
 function toNotation(b,m){
   const p=b[m.fr][m.fc],t=Math.abs(p),cap=b[m.tr][m.tc]!==0||m.enPassant?'x':'',dest=FILES[m.tc]+(8-m.tr);
   if(m.castle)return m.castle==='k'?'O-O':'O-O-O';
   return(t===PAWN&&cap?FILES[m.fc]:PIECE_LETTER[t])+cap+dest+(m.promo?'='+PIECE_LETTER[m.promo]:'');
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  NETWORKING
-// ═══════════════════════════════════════════════════════════════════
-let peer=null, conn=null, mySide=null;
-let connectTimer=null;
+// ═══════════════════════════════════════
+//  ROOM / NETWORKING via Firebase
+// ═══════════════════════════════════════
+let mySide=null, roomCode=null, moveCount=0;
+let moveListener=null, statusListener=null;
 
-// TURN servers ensure connection works across all firewalls/NAT
-const PEER_CFG = {
-  debug: 0,
-  config: {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'turn:openrelay.metered.ca:80',       username:'openrelayproject', credential:'openrelayproject' },
-      { urls: 'turn:openrelay.metered.ca:443',      username:'openrelayproject', credential:'openrelayproject' },
-      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username:'openrelayproject', credential:'openrelayproject' }
-    ]
-  }
-};
+function genCode(){
+  return Math.random().toString(36).substr(2,6).toUpperCase();
+}
 
-function setLobbyStatus(msg, cls=''){
+function setLobbyStatus(msg,cls=''){
   const el=document.getElementById('conn-status');
   el.innerHTML=msg; el.className=cls;
 }
 
-function showRetry(){ document.getElementById('btn-retry').style.display='block' }
-
-// ── HOST ────────────────────────────────────────────────────────
-function hostGame(){
+async function hostGame(){
   document.getElementById('btn-host').disabled=true;
-  setLobbyStatus('<span class="spinner"></span>Setting up room…');
+  setLobbyStatus('<span class="spinner"></span>Creating room…');
 
-  peer = new Peer(undefined, PEER_CFG);
+  const code = genCode();
+  roomCode = code;
+  mySide = W;
 
-  peer.on('open', id => {
-    const base = window.location.href.split('?')[0];
-    const link = base + '?join=' + id;
-    document.getElementById('host-area').style.display='flex';
-    document.getElementById('share-link-display').textContent = link;
-    setLobbyStatus('✅ Room ready — share the link above with your friend!', 'ok');
+  await db.ref('rooms/'+code).set({
+    status: 'waiting',
+    host: 'online',
+    guest: 'absent',
+    moves: [],
+    chat: [],
+    signal: null,
+    created: Date.now()
   });
 
-  peer.on('connection', c => {
-    conn = c;
-    mySide = W;
-    setLobbyStatus('<span class="spinner"></span>Friend found, establishing connection…', 'info');
-    conn.on('open', () => {
-      setLobbyStatus('✅ Connected!', 'ok');
-      conn.send({type:'start'});
+  // Build invite link
+  const base = window.location.href.split('?')[0];
+  const link = base + '?join=' + code;
+  document.getElementById('host-area').style.display='flex';
+  document.getElementById('share-link-display').textContent = link;
+  setLobbyStatus('✅ Room ready — share the link above!', 'ok');
+
+  // Wait for guest to join
+  db.ref('rooms/'+code+'/guest').on('value', snap=>{
+    if(snap.val()==='online'){
+      setLobbyStatus('✅ Friend joined!','ok');
+      db.ref('rooms/'+code+'/status').set('playing');
       startGame();
-    });
-    conn.on('data', handleData);
-    conn.on('close', onDisconnect);
-    conn.on('error', e => setLobbyStatus('Connection error: '+e,'err'));
+    }
   });
 
-  peer.on('error', e => {
-    setLobbyStatus('❌ ' + friendlyError(e.type), 'err');
-    document.getElementById('btn-host').disabled=false;
-    showRetry();
-  });
+  // Cleanup room after 30 min
+  setTimeout(()=>db.ref('rooms/'+code).remove(), 30*60*1000);
 }
 
 function copyLink(){
-  const link = document.getElementById('share-link-display').textContent;
+  const link=document.getElementById('share-link-display').textContent;
   navigator.clipboard.writeText(link)
     .then(()=>{ document.querySelector('#host-area .btn-outline').textContent='✅ Copied!'; })
     .catch(()=>{ prompt('Copy this link:', link); });
 }
 
-// ── JOIN ────────────────────────────────────────────────────────
-function joinFromInput(){
-  const val = document.getElementById('join-input').value.trim();
-  // Accept either a full URL (extract ?join=...) or a raw peer ID
-  let peerId = val;
-  try {
-    const url = new URL(val);
-    peerId = url.searchParams.get('join') || val;
-  } catch(_){}
-  if(!peerId){ setLobbyStatus('❌ Please paste the invite link', 'err'); return; }
-  doJoin(peerId);
+async function joinFromInput(){
+  let val=document.getElementById('join-input').value.trim();
+  let code=val;
+  try{ const u=new URL(val); code=u.searchParams.get('join')||val; }catch(_){}
+  code=code.toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(code.length!==6){ setLobbyStatus('❌ Invalid link — paste the full invite link','err'); return; }
+  await doJoin(code);
 }
 
-function doJoin(peerId){
+async function doJoin(code){
   document.getElementById('btn-join').disabled=true;
   document.getElementById('join-input').disabled=true;
-  setLobbyStatus('<span class="spinner"></span>Connecting to host…');
+  setLobbyStatus('<span class="spinner"></span>Joining room '+code+'…');
 
-  peer = new Peer(undefined, PEER_CFG);
-
-  peer.on('open', () => {
-    conn = peer.connect(peerId, {reliable:true});
-
-    setLobbyStatus('<span class="spinner"></span>Reaching host… (this can take up to 30s)');
-
-    // Step 1: after 10s still not open, show reassurance
-    const halfway = setTimeout(()=>{
-      if(!conn || !conn.open)
-        setLobbyStatus('<span class="spinner"></span>Still trying… Make sure host page is open.','info');
-    }, 10000);
-
-    // Timeout: if not open in 30 seconds
-    connectTimer = setTimeout(()=>{
-      if(!conn || !conn.open){
-        clearTimeout(halfway);
-        setLobbyStatus('❌ Timed out. Ask host to click "Create Room" again and send a new link.','err');
-        showRetry();
-      }
-    }, 30000);
-
-    conn.on('open', ()=>{
-      clearTimeout(connectTimer);
-      setLobbyStatus('✅ Connected! Waiting for host to start…','ok');
-    });
-    conn.on('data', handleData);
-    conn.on('close', onDisconnect);
-    conn.on('error', e=>{
-      clearTimeout(connectTimer);
-      setLobbyStatus('❌ '+friendlyError(e.type||e),'err');
-      showRetry();
-    });
-  });
-
-  peer.on('error', e=>{
-    clearTimeout(connectTimer);
-    setLobbyStatus('❌ '+friendlyError(e.type||e),'err');
-    showRetry();
-  });
-}
-
-function friendlyError(type){
-  const map={
-    'peer-unavailable':'Host not found. Make sure the host has the page open.',
-    'network':'Network error. Check your internet connection.',
-    'server-error':'Could not reach the matchmaking server. Try again.',
-    'unavailable-id':'Room ID conflict. Please reload and try again.',
-  };
-  return map[type] || ('Error: '+type);
-}
-
-function sendMsg(obj){ if(conn&&conn.open) conn.send(obj) }
-
-function handleData(data){
-  if(data.type==='start'){ mySide=B; startGame(); return }
-  if(data.type==='move'){ receiveMove(data.move); return }
-  if(data.type==='chat'){ appendChat('Friend', data.msg); return }
-  if(data.type==='draw-offer'){ handleDrawOffer(); return }
-  if(data.type==='draw-accept'){ endGame('Draw by agreement'); return }
-  if(data.type==='resign'){ endGame('Friend resigned — you win! 🎉'); return }
-}
-
-function onDisconnect(){
-  updateStatus('Friend disconnected', '#f88');
-}
-
-// Auto-join if URL has ?join=...
-window.addEventListener('load', ()=>{
-  const params = new URLSearchParams(window.location.search);
-  const joinId = params.get('join');
-  if(joinId){
-    document.getElementById('join-input').value = window.location.href;
-    setLobbyStatus('<span class="spinner"></span>Invite link detected — connecting…','info');
-    setTimeout(()=>doJoin(joinId), 600);
+  const snap = await db.ref('rooms/'+code).get();
+  if(!snap.exists()){
+    setLobbyStatus('❌ Room not found. Ask host to create a new room.','err');
+    document.getElementById('btn-join').disabled=false;
+    document.getElementById('join-input').disabled=false;
+    return;
   }
+  const room=snap.val();
+  if(room.status!=='waiting'){
+    setLobbyStatus('❌ Room is already in use or has ended.','err');
+    document.getElementById('btn-join').disabled=false;
+    document.getElementById('join-input').disabled=false;
+    return;
+  }
+
+  roomCode=code; mySide=B;
+  await db.ref('rooms/'+code+'/guest').set('online');
+  setLobbyStatus('✅ Joined! Starting game…','ok');
+  startGame();
+}
+
+// Auto-join if URL has ?join=CODE
+window.addEventListener('load',()=>{
+  const p=new URLSearchParams(window.location.search);
+  const code=p.get('join');
+  if(code){ document.getElementById('join-input').value=window.location.href; doJoin(code.toUpperCase()); }
 });
 
-// ═══════════════════════════════════════════════════════════════════
-//  GAME STATE
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════
+//  GAME
+// ═══════════════════════════════════════
 let board,turn,selected,possibleMoves,gameOver;
 let castleRights,enPassantSq,lastMove;
 let capturedByWhite,capturedByBlack;
@@ -437,8 +369,7 @@ function startGame(){
   ];
   turn=W; selected=null; possibleMoves=[]; gameOver=false;
   castleRights={W:{k:true,q:true},B:{k:true,q:true}};
-  enPassantSq=null; lastMove=null;
-  capturedByWhite=[]; capturedByBlack=[];
+  enPassantSq=null; lastMove=null; capturedByWhite=[]; capturedByBlack=[]; moveCount=0;
 
   const you=document.getElementById('tag-you'), opp=document.getElementById('tag-opp');
   if(mySide===W){you.textContent='You (White ♔)';opp.textContent='Friend (Black ♚)'}
@@ -449,18 +380,55 @@ function startGame(){
   buildLabels();
   updateStatus(mySide===W?'Your turn':'Waiting for White…');
   render();
+  listenForMoves();
+  listenForSignals();
 }
 
 function buildLabels(){
-  const rl=document.getElementById('rank-labels'), fl=document.getElementById('file-labels');
-  rl.innerHTML=''; fl.innerHTML='';
+  const rl=document.getElementById('rank-labels'),fl=document.getElementById('file-labels');
+  rl.innerHTML='';fl.innerHTML='';
   const ranks=mySide===W?['8','7','6','5','4','3','2','1']:['1','2','3','4','5','6','7','8'];
   const files=mySide===W?['a','b','c','d','e','f','g','h']:['h','g','f','e','d','c','b','a'];
   ranks.forEach(r=>{const d=document.createElement('div');d.textContent=r;rl.appendChild(d)});
   files.forEach(f=>{const d=document.createElement('div');d.textContent=f;fl.appendChild(d)});
 }
 
-function executeMove(m){
+// Listen for opponent's moves via Firebase
+function listenForMoves(){
+  db.ref('rooms/'+roomCode+'/moves').on('value', snap=>{
+    const moves = snap.val() || [];
+    // Only process moves beyond what we've already applied
+    if(moves.length > moveCount){
+      const newMoves = moves.slice(moveCount);
+      newMoves.forEach(m => {
+        if(m && turn !== mySide) applyRemoteMove(m);
+      });
+    }
+  });
+}
+
+// Listen for signals (draw offer, resign, disconnect)
+function listenForSignals(){
+  db.ref('rooms/'+roomCode+'/signal').on('value', snap=>{
+    const sig=snap.val();
+    if(!sig) return;
+    if(sig.type==='draw-offer' && sig.from!==mySide){
+      if(confirm('Your friend offers a draw. Accept?')){
+        db.ref('rooms/'+roomCode+'/signal').set({type:'draw-accept',from:mySide});
+        endGame('Draw by agreement');
+      }
+    }
+    if(sig.type==='draw-accept' && sig.from!==mySide) endGame('Draw by agreement');
+    if(sig.type==='resign' && sig.from!==mySide) endGame('Friend resigned — you win! 🎉');
+    if(sig.type==='chat' && sig.from!==mySide) appendChat('Friend', sig.msg);
+  });
+}
+
+function applyRemoteMove(m){
+  executeMove(m, true);
+}
+
+function executeMove(m, remote=false){
   const notation=toNotation(board,m);
   const captured=m.enPassant?Math.abs(board[m.capRow][m.capCol]):board[m.tr][m.tc]!==0?Math.abs(board[m.tr][m.tc]):0;
   if(captured){
@@ -469,7 +437,7 @@ function executeMove(m){
   }
   castleRights=updateCastle(castleRights,m,board);
   enPassantSq=m.doublePawn?[m.tr+(turn===W?1:-1),m.tc]:null;
-  board=applyMove(board,m); lastMove=m;
+  board=applyMove(board,m); lastMove=m; moveCount++;
 
   const logDiv=document.getElementById('move-log');
   const entry=document.createElement('div');
@@ -490,7 +458,11 @@ function executeMove(m){
   updateCaptured(); render();
 }
 
-function receiveMove(m){ if(!gameOver) executeMove(m) }
+function pushMove(m){
+  db.ref('rooms/'+roomCode+'/moves').transaction(moves=>{
+    return [...(moves||[]), m];
+  });
+}
 
 function onCellClick(vr,vc){
   if(gameOver||turn!==mySide) return;
@@ -500,7 +472,7 @@ function onCellClick(vr,vc){
     const m=possibleMoves.find(mv=>mv.tr===r&&mv.tc===c&&!mv.promo);
     const promoMoves=possibleMoves.filter(mv=>mv.tr===r&&mv.tc===c&&mv.promo);
     if(promoMoves.length){ showPromoModal(promoMoves); return }
-    if(m){ sendMsg({type:'move',move:m}); executeMove(m); return }
+    if(m){ pushMove(m); executeMove(m); return }
     if(side(p)===mySide){ selected=[r,c]; possibleMoves=legalMoves(board,r,c,castleRights,enPassantSq); render(); return }
     selected=null; possibleMoves=[]; render(); return;
   }
@@ -516,7 +488,7 @@ function showPromoModal(moves){
     d.addEventListener('click',()=>{
       modal.classList.remove('show');
       const m=moves.find(mv=>mv.promo===pt);
-      if(m){ sendMsg({type:'move',move:m}); executeMove(m) }
+      if(m){ pushMove(m); executeMove(m); }
     });
     choices.appendChild(d);
   });
@@ -525,8 +497,8 @@ function showPromoModal(moves){
 
 function render(){
   const boardEl=document.getElementById('board'); boardEl.innerHTML='';
-  const wCheck=inCheck(board,W), bCheck=inCheck(board,B);
-  const wKing=findKing(board,W), bKing=findKing(board,B);
+  const wCheck=inCheck(board,W),bCheck=inCheck(board,B);
+  const wKing=findKing(board,W),bKing=findKing(board,B);
   for(let vr=0;vr<8;vr++){
     for(let vc=0;vc<8;vc++){
       const r=mySide===W?vr:7-vr, c=mySide===W?vc:7-vc;
@@ -535,8 +507,8 @@ function render(){
       if(lastMove&&((lastMove.fr===r&&lastMove.fc===c)||(lastMove.tr===r&&lastMove.tc===c)))cell.classList.add('last-move');
       if(selected&&selected[0]===r&&selected[1]===c)cell.classList.add('selected');
       if((wCheck&&wKing&&wKing[0]===r&&wKing[1]===c)||(bCheck&&bKing&&bKing[0]===r&&bKing[1]===c))cell.classList.add('check');
-      const isPossible=possibleMoves.some(m=>m.tr===r&&m.tc===c);
-      if(isPossible){cell.classList.add('possible');if(board[r][c]!==0)cell.classList.add('has-piece')}
+      const ip=possibleMoves.some(m=>m.tr===r&&m.tc===c);
+      if(ip){cell.classList.add('possible');if(board[r][c]!==0)cell.classList.add('has-piece')}
       const p=board[r][c]; if(p)cell.textContent=UNICODE[p]||'?';
       if(turn!==mySide||gameOver)cell.classList.add('no-move');
       const vvr=vr,vvc=vc;
@@ -546,27 +518,33 @@ function render(){
   }
 }
 
-function updateStatus(msg, color='#a0d0ff'){
+function updateStatus(msg,color='#a0d0ff'){
   const el=document.getElementById('status'); el.textContent=msg; el.style.color=color;
 }
 function updateCaptured(){
-  const youCap=mySide===W?capturedByWhite:capturedByBlack;
-  const oppCap=mySide===W?capturedByBlack:capturedByWhite;
-  document.getElementById('cap-you').textContent=youCap.map(p=>UNICODE[p]||'').join('');
-  document.getElementById('cap-opp').textContent=oppCap.map(p=>UNICODE[p]||'').join('');
+  const yc=mySide===W?capturedByWhite:capturedByBlack;
+  const oc=mySide===W?capturedByBlack:capturedByWhite;
+  document.getElementById('cap-you').textContent=yc.map(p=>UNICODE[p]||'').join('');
+  document.getElementById('cap-opp').textContent=oc.map(p=>UNICODE[p]||'').join('');
 }
 function endGame(msg){ gameOver=true; updateStatus(msg,'#f0c040') }
 
-// ── Draw / Resign ─────────────────────────────────────────────
-function offerDraw(){ if(!gameOver){ sendMsg({type:'draw-offer'}); updateStatus('Draw offered…') } }
-function handleDrawOffer(){ if(confirm('Your friend offers a draw. Accept?')){ sendMsg({type:'draw-accept'}); endGame('Draw by agreement') } }
-function resign(){ if(!gameOver&&confirm('Are you sure you want to resign?')){ sendMsg({type:'resign'}); endGame('You resigned. '+(mySide===W?'Black':'White')+' wins.') } }
-
-// ── Chat ──────────────────────────────────────────────────────
+function offerDraw(){
+  if(gameOver) return;
+  db.ref('rooms/'+roomCode+'/signal').set({type:'draw-offer',from:mySide});
+  updateStatus('Draw offered…');
+}
+function resign(){
+  if(!gameOver&&confirm('Are you sure you want to resign?')){
+    db.ref('rooms/'+roomCode+'/signal').set({type:'resign',from:mySide});
+    endGame('You resigned. '+(mySide===W?'Black':'White')+' wins.');
+  }
+}
 function sendChat(){
   const inp=document.getElementById('chat-input'), msg=inp.value.trim();
   if(!msg) return; inp.value='';
-  sendMsg({type:'chat',msg}); appendChat('You',msg);
+  db.ref('rooms/'+roomCode+'/signal').set({type:'chat',from:mySide,msg,t:Date.now()});
+  appendChat('You',msg);
 }
 function appendChat(who,msg){
   const div=document.getElementById('chat-msgs');
