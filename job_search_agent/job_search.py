@@ -44,12 +44,9 @@ LOCATIONS = [
     "California",
 ]
 
-# Focused queries for Google Jobs (kept short to stay within SerpAPI free tier)
+# Single broad query for Google Jobs — keeps usage within SerpAPI free tier (100/month)
 GOOGLE_SEARCH_QUERIES = [
-    "pharma validation engineer entry level",
-    "pharmaceutical validation associate",
-    "GMP process validation life sciences",
-    "equipment qualification biotech",
+    "pharma validation engineer OR associate OR specialist",
 ]
 
 INDUSTRY_KEYWORDS = [
