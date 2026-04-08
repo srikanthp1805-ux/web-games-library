@@ -15,31 +15,32 @@ RECIPIENT_EMAIL = os.environ.get("RECIPIENT_EMAIL", GMAIL_USER)
 
 BASE_URL = "https://api.adzuna.com/v1/api/jobs/us/search"
 
+# Broad queries used for both USA-wide and location-specific searches
 SEARCH_QUERIES = [
-    "validation engineer pharmaceutical",
-    "validation engineer biopharma",
-    "validation engineer biotech",
-    "validation associate pharmaceutical",
-    "validation associate biopharma",
-    "validation associate biotech",
-    "validation analyst pharmaceutical",
-    "validation analyst biopharma",
-    "equipment validation pharmaceutical",
-    "equipment validation biopharma",
-    "equipment qualification pharma",
-    "quality assurance validation pharmaceutical",
-    "quality assurance validation biopharma",
-    "process validation pharmaceutical",
-    "process validation biopharma",
-    "validation specialist pharmaceutical",
-    "validation specialist biopharma",
-    "IQ OQ PQ pharmaceutical",
-    "qualification specialist pharma",
-    "GMP validation engineer",
-    "GMP validation associate",
-    "pharma validation contract",
-    "validation engineer contract pharma",
-    "validation associate contract biopharma",
+    "validation engineer",
+    "validation associate",
+    "validation analyst",
+    "validation specialist",
+    "equipment validation",
+    "equipment qualification",
+    "process validation",
+    "GMP validation",
+    "IQ OQ PQ",
+    "qualification engineer",
+    "qualification specialist",
+    "quality assurance validation",
+]
+
+# Location-specific searches (NE states + major pharma hubs)
+LOCATIONS = [
+    "Massachusetts",
+    "New Hampshire",
+    "Rhode Island",
+    "Connecticut",
+    "New Jersey",
+    "Pennsylvania",
+    "North Carolina",
+    "California",
 ]
 
 INDUSTRY_KEYWORDS = [
@@ -102,13 +103,8 @@ def is_relevant(job):
         if kw in title:
             return False
 
-    combined = title + " " + description
-    # Pass if industry keyword found in title OR description
-    # Also pass if the search query itself implies pharma context (query contains pharma terms)
-    if any(kw in combined for kw in INDUSTRY_KEYWORDS):
-        return True
-    # If no industry keyword found, still include if title has strong validation signal
-    validation_terms = ["validation", "qualification", "iq oq pq", "gmp", "gxp"]
+    # Search queries are already pharma-specific, so just exclude non-relevant titles
+    validation_terms = ["validation", "qualification", "iq oq", "gmp", "gxp", "qualify"]
     return any(t in title for t in validation_terms)
 
 
@@ -116,7 +112,17 @@ def collect_all_jobs():
     seen = set()
     jobs = []
 
-    # USA-wide search — catches remote, all states, full-time and contract
+    # Location-specific searches (better precision for target states)
+    for location in LOCATIONS:
+        for query in SEARCH_QUERIES:
+            for job in search_jobs(query, location=location):
+                fid = job_fingerprint(job)
+                if fid not in seen and is_relevant(job):
+                    seen.add(fid)
+                    jobs.append(job)
+            time.sleep(0.3)
+
+    # USA-wide search (catches remote + any remaining states)
     for query in SEARCH_QUERIES:
         for job in search_jobs(query):
             fid = job_fingerprint(job)
