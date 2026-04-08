@@ -12,6 +12,7 @@ ADZUNA_API_KEY = os.environ["ADZUNA_API_KEY"]
 GMAIL_USER = os.environ["GMAIL_USER"]
 GMAIL_APP_PASSWORD = os.environ["GMAIL_APP_PASSWORD"]
 RECIPIENT_EMAILS = [e.strip() for e in os.environ.get("RECIPIENT_EMAIL", GMAIL_USER).split(",")]
+SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
 
 BASE_URL = "https://api.adzuna.com/v1/api/jobs/us/search"
 
@@ -41,6 +42,14 @@ LOCATIONS = [
     "Pennsylvania",
     "North Carolina",
     "California",
+]
+
+# Focused queries for Google Jobs (kept short to stay within SerpAPI free tier)
+GOOGLE_SEARCH_QUERIES = [
+    "pharma validation engineer entry level",
+    "pharmaceutical validation associate",
+    "GMP process validation life sciences",
+    "equipment qualification biotech",
 ]
 
 INDUSTRY_KEYWORDS = [
@@ -83,6 +92,42 @@ def search_jobs(query, location=None, page=1):
         return []
 
 
+def search_google_jobs(query):
+    if not SERPAPI_KEY:
+        return []
+    params = {
+        "engine": "google_jobs",
+        "q": query,
+        "api_key": SERPAPI_KEY,
+        "chips": "date_posted:week",
+    }
+    try:
+        resp = requests.get("https://serpapi.com/search.json", params=params, timeout=15)
+        resp.raise_for_status()
+        return resp.json().get("jobs_results", [])
+    except Exception as e:
+        print(f"  [WARN] Google Jobs '{query}': {e}")
+        return []
+
+
+def normalize_google_job(raw):
+    apply_options = raw.get("apply_options") or []
+    url = apply_options[0].get("link", "#") if apply_options else "#"
+    extensions = raw.get("detected_extensions") or {}
+    return {
+        "id": None,
+        "title": raw.get("title", ""),
+        "company": {"display_name": raw.get("company_name", "")},
+        "location": {"display_name": raw.get("location", "")},
+        "redirect_url": url,
+        "created": extensions.get("posted_at", ""),
+        "salary_min": None,
+        "salary_max": None,
+        "_salary_text": extensions.get("salary", ""),
+        "_source": "Google Jobs",
+    }
+
+
 def job_fingerprint(job):
     return job.get("id") or hashlib.md5(
         f"{job.get('title', '')}"
@@ -93,7 +138,6 @@ def job_fingerprint(job):
 
 def is_relevant(job):
     title = (job.get("title") or "").lower()
-    description = (job.get("description") or "").lower()
 
     for kw in EXCLUDE_TITLE_KEYWORDS:
         if kw in title:
@@ -103,8 +147,7 @@ def is_relevant(job):
         if kw in title:
             return False
 
-    # Search queries are already pharma-specific, so just exclude non-relevant titles
-    validation_terms = ["validation", "qualification", "iq oq", "gmp", "gxp", "qualify"]
+    validation_terms = ["validation", "qualification", "iq/oq", "iq oq", "gmp", "gxp", "qualify"]
     return any(t in title for t in validation_terms)
 
 
@@ -112,7 +155,7 @@ def collect_all_jobs():
     seen = set()
     jobs = []
 
-    # Location-specific searches (better precision for target states)
+    # Location-specific Adzuna searches (better precision for target states)
     for location in LOCATIONS:
         for query in SEARCH_QUERIES:
             for job in search_jobs(query, location=location):
@@ -122,7 +165,7 @@ def collect_all_jobs():
                     jobs.append(job)
             time.sleep(0.3)
 
-    # USA-wide search (catches remote + any remaining states)
+    # USA-wide Adzuna search (catches remote + any remaining states)
     for query in SEARCH_QUERIES:
         for job in search_jobs(query):
             fid = job_fingerprint(job)
@@ -130,6 +173,20 @@ def collect_all_jobs():
                 seen.add(fid)
                 jobs.append(job)
         time.sleep(0.3)
+
+    # Google Jobs search via SerpAPI (skipped if SERPAPI_KEY not set)
+    if SERPAPI_KEY:
+        print("Running Google Jobs search...")
+        for query in GOOGLE_SEARCH_QUERIES:
+            for raw in search_google_jobs(query):
+                job = normalize_google_job(raw)
+                fid = job_fingerprint(job)
+                if fid not in seen and is_relevant(job):
+                    seen.add(fid)
+                    jobs.append(job)
+            time.sleep(0.5)
+    else:
+        print("SERPAPI_KEY not set — skipping Google Jobs search.")
 
     return jobs
 
@@ -142,7 +199,7 @@ def build_html(jobs):
 <html>
 <body style="font-family:Arial,sans-serif;max-width:800px;margin:auto;padding:20px;color:#333;">
 <h2 style="color:#1a73e8;">Pharma Validation Job Digest</h2>
-<p style="color:#666;">{now.strftime('%B %d, %Y — %I:%M %p UTC')} &nbsp;|&nbsp; Last 24 hours</p>
+<p style="color:#666;">{now.strftime('%B %d, %Y — %I:%M %p UTC')} &nbsp;|&nbsp; Last 7 days</p>
 <p><b>Roles:</b> Validation Engineer &bull; Validation Associate &bull; Equipment Validation &bull; QA Validation &bull; Process Validation</p>
 <p><b>Industry:</b> Pharma / Biopharma / Biotech / Life Sciences &nbsp;&bull;&nbsp; <b>Type:</b> Full-Time &amp; Contract &nbsp;&bull;&nbsp; <b>Level:</b> Entry–Mid</p>
 <hr style="border:1px solid #eee;">
@@ -150,7 +207,7 @@ def build_html(jobs):
 """
 
     if not jobs:
-        html += "<p style='color:#888;'>No new matching jobs found in the last 24 hours. Check back at the next run.</p>"
+        html += "<p style='color:#888;'>No new matching jobs found. Check back at the next run.</p>"
     else:
         for i, job in enumerate(jobs, 1):
             title = job.get("title", "N/A")
@@ -158,6 +215,7 @@ def build_html(jobs):
             location = job.get("location", {}).get("display_name", "N/A")
             url = job.get("redirect_url", "#")
             created = (job.get("created") or "")[:10]
+            source = job.get("_source", "Adzuna")
 
             salary = ""
             lo = job.get("salary_min")
@@ -166,6 +224,8 @@ def build_html(jobs):
                 salary = f"${lo:,.0f} – ${hi:,.0f} / yr"
             elif lo:
                 salary = f"From ${lo:,.0f} / yr"
+            elif job.get("_salary_text"):
+                salary = job["_salary_text"]
 
             html += f"""
 <div style="margin-bottom:18px;padding:16px;border:1px solid #e0e0e0;border-radius:6px;background:#fafafa;">
@@ -176,11 +236,12 @@ def build_html(jobs):
   <p style="margin:3px 0;font-size:14px;"><b>Location:</b> {location}</p>
   {"<p style='margin:3px 0;font-size:14px;'><b>Salary:</b> " + salary + "</p>" if salary else ""}
   {"<p style='margin:3px 0;font-size:14px;color:#888;'>Posted: " + created + "</p>" if created else ""}
+  <p style="margin:3px 0;font-size:12px;color:#aaa;">Source: {source}</p>
   <a href="{url}" style="display:inline-block;margin-top:8px;background:#1a73e8;color:white;padding:7px 16px;border-radius:4px;text-decoration:none;font-size:13px;">View &amp; Apply</a>
 </div>"""
 
     html += "\n<hr style='border:1px solid #eee;margin-top:30px;'>"
-    html += "<p style='color:#aaa;font-size:12px;'>Powered by Adzuna API &bull; Automated via GitHub Actions</p>"
+    html += "<p style='color:#aaa;font-size:12px;'>Sources: Adzuna &bull; Google Jobs (SerpAPI) &bull; Automated via GitHub Actions</p>"
     html += "\n</body></html>"
     return html
 
