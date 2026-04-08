@@ -18,8 +18,10 @@ BASE_URL = "https://api.adzuna.com/v1/api/jobs/us/search"
 SEARCH_QUERIES = [
     "validation engineer pharmaceutical",
     "validation engineer biopharma",
+    "validation engineer biotech",
     "validation associate pharmaceutical",
     "validation associate biopharma",
+    "validation associate biotech",
     "validation analyst pharmaceutical",
     "validation analyst biopharma",
     "equipment validation pharmaceutical",
@@ -33,15 +35,11 @@ SEARCH_QUERIES = [
     "validation specialist biopharma",
     "IQ OQ PQ pharmaceutical",
     "qualification specialist pharma",
-    "GMP validation",
-    "pharma validation",
-]
-
-LOCATIONS = [
-    "Massachusetts",
-    "New Hampshire",
-    "Rhode Island",
-    "Connecticut",
+    "GMP validation engineer",
+    "GMP validation associate",
+    "pharma validation contract",
+    "validation engineer contract pharma",
+    "validation associate contract biopharma",
 ]
 
 INDUSTRY_KEYWORDS = [
@@ -118,17 +116,7 @@ def collect_all_jobs():
     seen = set()
     jobs = []
 
-    # State-level search
-    for location in LOCATIONS:
-        for query in SEARCH_QUERIES:
-            for job in search_jobs(query, location=location):
-                fid = job_fingerprint(job)
-                if fid not in seen and is_relevant(job):
-                    seen.add(fid)
-                    jobs.append(job)
-            time.sleep(0.3)
-
-    # USA-wide (catches remote + other states)
+    # USA-wide search — catches remote, all states, full-time and contract
     for query in SEARCH_QUERIES:
         for job in search_jobs(query):
             fid = job_fingerprint(job)
@@ -149,8 +137,8 @@ def build_html(jobs):
 <body style="font-family:Arial,sans-serif;max-width:800px;margin:auto;padding:20px;color:#333;">
 <h2 style="color:#1a73e8;">Pharma Validation Job Digest</h2>
 <p style="color:#666;">{now.strftime('%B %d, %Y — %I:%M %p UTC')} &nbsp;|&nbsp; Last 24 hours</p>
-<p><b>Roles:</b> Validation Engineer &bull; Equipment Validation &bull; QA Validation &bull; Process Validation</p>
-<p><b>Industry:</b> Pharma / Biopharma / Biotech / Life Sciences &nbsp;&bull;&nbsp; <b>Type:</b> Full-Time &nbsp;&bull;&nbsp; <b>Level:</b> Entry–Mid</p>
+<p><b>Roles:</b> Validation Engineer &bull; Validation Associate &bull; Equipment Validation &bull; QA Validation &bull; Process Validation</p>
+<p><b>Industry:</b> Pharma / Biopharma / Biotech / Life Sciences &nbsp;&bull;&nbsp; <b>Type:</b> Full-Time &amp; Contract &nbsp;&bull;&nbsp; <b>Level:</b> Entry–Mid</p>
 <hr style="border:1px solid #eee;">
 <h3 style="color:#333;">{count} job{'s' if count != 1 else ''} found</h3>
 """
