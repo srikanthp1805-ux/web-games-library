@@ -11,7 +11,7 @@ ADZUNA_APP_ID = os.environ["ADZUNA_APP_ID"]
 ADZUNA_API_KEY = os.environ["ADZUNA_API_KEY"]
 GMAIL_USER = os.environ["GMAIL_USER"]
 GMAIL_APP_PASSWORD = os.environ["GMAIL_APP_PASSWORD"]
-RECIPIENT_EMAIL = os.environ.get("RECIPIENT_EMAIL", GMAIL_USER)
+RECIPIENT_EMAILS = [e.strip() for e in os.environ.get("RECIPIENT_EMAIL", GMAIL_USER).split(",")]
 
 BASE_URL = "https://api.adzuna.com/v1/api/jobs/us/search"
 
@@ -192,12 +192,12 @@ def send_email(jobs):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = GMAIL_USER
-    msg["To"] = RECIPIENT_EMAIL
+    msg["To"] = ", ".join(RECIPIENT_EMAILS)
     msg.attach(MIMEText(build_html(jobs), "html"))
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-        server.sendmail(GMAIL_USER, RECIPIENT_EMAIL, msg.as_string())
+        server.sendmail(GMAIL_USER, RECIPIENT_EMAILS, msg.as_string())
 
     print(f"Email sent: {subject}")
 
