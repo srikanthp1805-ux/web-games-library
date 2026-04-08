@@ -18,6 +18,10 @@ BASE_URL = "https://api.adzuna.com/v1/api/jobs/us/search"
 SEARCH_QUERIES = [
     "validation engineer pharmaceutical",
     "validation engineer biopharma",
+    "validation associate pharmaceutical",
+    "validation associate biopharma",
+    "validation analyst pharmaceutical",
+    "validation analyst biopharma",
     "equipment validation pharmaceutical",
     "equipment validation biopharma",
     "equipment qualification pharma",
@@ -29,6 +33,8 @@ SEARCH_QUERIES = [
     "validation specialist biopharma",
     "IQ OQ PQ pharmaceutical",
     "qualification specialist pharma",
+    "GMP validation",
+    "pharma validation",
 ]
 
 LOCATIONS = [
@@ -62,8 +68,7 @@ def search_jobs(query, location=None, page=1):
         "app_key": ADZUNA_API_KEY,
         "results_per_page": 50,
         "what": query,
-        "full_time": 1,
-        "max_days_old": 3,
+        "max_days_old": 7,
     }
     if location:
         params["where"] = location
@@ -100,7 +105,13 @@ def is_relevant(job):
             return False
 
     combined = title + " " + description
-    return any(kw in combined for kw in INDUSTRY_KEYWORDS)
+    # Pass if industry keyword found in title OR description
+    # Also pass if the search query itself implies pharma context (query contains pharma terms)
+    if any(kw in combined for kw in INDUSTRY_KEYWORDS):
+        return True
+    # If no industry keyword found, still include if title has strong validation signal
+    validation_terms = ["validation", "qualification", "iq oq pq", "gmp", "gxp"]
+    return any(t in title for t in validation_terms)
 
 
 def collect_all_jobs():
