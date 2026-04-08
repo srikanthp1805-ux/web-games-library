@@ -63,7 +63,7 @@ def search_jobs(query, location=None, page=1):
         "results_per_page": 50,
         "what": query,
         "full_time": 1,
-        "max_days_old": 1,
+        "max_days_old": 3,
     }
     if location:
         params["where"] = location
