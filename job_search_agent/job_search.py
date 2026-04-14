@@ -38,10 +38,6 @@ LOCATIONS = [
     "New Hampshire",
     "Rhode Island",
     "Connecticut",
-    "New Jersey",
-    "Pennsylvania",
-    "North Carolina",
-    "California",
 ]
 
 # Single broad query for Google Jobs — keeps usage within SerpAPI free tier (100/month)
@@ -67,10 +63,9 @@ EXCLUDE_SENIORITY = [
 ]
 
 # Target state abbreviations and full names for location validation
-TARGET_STATE_ABBREVS = {"MA", "NH", "RI", "CT", "NJ", "PA", "NC", "CA"}
+TARGET_STATE_ABBREVS = {"MA", "NH", "RI", "CT"}
 TARGET_STATE_NAMES = {
     "massachusetts", "new hampshire", "rhode island", "connecticut",
-    "new jersey", "pennsylvania", "north carolina", "california",
 }
 
 
