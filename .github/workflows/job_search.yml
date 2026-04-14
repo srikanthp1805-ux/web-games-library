@@ -2,8 +2,8 @@ name: Pharma Validation Job Search Agent
 
 on:
   schedule:
-    - cron: '0 12 * * *'   # 8:00 AM EDT (UTC-4)
-    - cron: '0 18 * * *'   # 2:00 PM EDT (UTC-4)
+    - cron: '0 12 * * 1-5'   # 8:00 AM EDT (UTC-4), Mon–Fri only
+    - cron: '0 18 * * 1-5'   # 2:00 PM EDT (UTC-4), Mon–Fri only
   workflow_dispatch:        # allow manual trigger from GitHub UI
 
 jobs:

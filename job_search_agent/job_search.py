@@ -66,6 +66,27 @@ EXCLUDE_SENIORITY = [
     "principal", "head of", "vp ", "vice president", "staff engineer",
 ]
 
+# Target state abbreviations and full names for location validation
+TARGET_STATE_ABBREVS = {"MA", "NH", "RI", "CT", "NJ", "PA", "NC", "CA"}
+TARGET_STATE_NAMES = {
+    "massachusetts", "new hampshire", "rhode island", "connecticut",
+    "new jersey", "pennsylvania", "north carolina", "california",
+}
+
+
+def is_in_target_state(job):
+    """Return True if job location is in a target state, remote, or unspecified."""
+    loc = (job.get("location", {}).get("display_name") or "").lower().strip()
+    if not loc or "remote" in loc or "united states" in loc or "anywhere" in loc:
+        return True
+    for abbrev in TARGET_STATE_ABBREVS:
+        if f", {abbrev.lower()}" in loc or loc.endswith(f" {abbrev.lower()}"):
+            return True
+    for name in TARGET_STATE_NAMES:
+        if name in loc:
+            return True
+    return False
+
 
 def search_jobs(query, location=None, page=1):
     params = {
@@ -73,7 +94,7 @@ def search_jobs(query, location=None, page=1):
         "app_key": ADZUNA_API_KEY,
         "results_per_page": 50,
         "what": query,
-        "max_days_old": 7,
+        "max_days_old": 2,
     }
     if location:
         params["where"] = location
@@ -157,7 +178,7 @@ def collect_all_jobs():
         for query in SEARCH_QUERIES:
             for job in search_jobs(query, location=location):
                 fid = job_fingerprint(job)
-                if fid not in seen and is_relevant(job):
+                if fid not in seen and is_relevant(job) and is_in_target_state(job):
                     seen.add(fid)
                     jobs.append(job)
             time.sleep(0.3)
@@ -166,7 +187,7 @@ def collect_all_jobs():
     for query in SEARCH_QUERIES:
         for job in search_jobs(query):
             fid = job_fingerprint(job)
-            if fid not in seen and is_relevant(job):
+            if fid not in seen and is_relevant(job) and is_in_target_state(job):
                 seen.add(fid)
                 jobs.append(job)
         time.sleep(0.3)
@@ -178,7 +199,7 @@ def collect_all_jobs():
             for raw in search_google_jobs(query):
                 job = normalize_google_job(raw)
                 fid = job_fingerprint(job)
-                if fid not in seen and is_relevant(job):
+                if fid not in seen and is_relevant(job) and is_in_target_state(job):
                     seen.add(fid)
                     jobs.append(job)
             time.sleep(0.5)
@@ -196,7 +217,7 @@ def build_html(jobs):
 <html>
 <body style="font-family:Arial,sans-serif;max-width:800px;margin:auto;padding:20px;color:#333;">
 <h2 style="color:#1a73e8;">Pharma Validation Job Digest</h2>
-<p style="color:#666;">{now.strftime('%B %d, %Y — %I:%M %p UTC')} &nbsp;|&nbsp; Last 7 days</p>
+<p style="color:#666;">{now.strftime('%B %d, %Y — %I:%M %p UTC')} &nbsp;|&nbsp; Last 2 days</p>
 <p><b>Roles:</b> Validation Engineer &bull; Validation Associate &bull; Equipment Validation &bull; QA Validation &bull; Process Validation</p>
 <p><b>Industry:</b> Pharma / Biopharma / Biotech / Life Sciences &nbsp;&bull;&nbsp; <b>Type:</b> Full-Time &amp; Contract &nbsp;&bull;&nbsp; <b>Level:</b> Entry–Mid</p>
 <hr style="border:1px solid #eee;">
