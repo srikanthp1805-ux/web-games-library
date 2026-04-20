@@ -72,7 +72,7 @@ TARGET_STATE_NAMES = {
 def is_in_target_state(job):
     """Return True if job location is in a target state, remote, or unspecified."""
     loc = (job.get("location", {}).get("display_name") or "").lower().strip()
-    if not loc or "remote" in loc or "united states" in loc or "anywhere" in loc:
+    if not loc or "remote" in loc or "anywhere" in loc:
         return True
     for abbrev in TARGET_STATE_ABBREVS:
         if f", {abbrev.lower()}" in loc or loc.endswith(f" {abbrev.lower()}"):
