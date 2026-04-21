@@ -69,17 +69,66 @@ TARGET_STATE_NAMES = {
 }
 
 
+NON_TARGET_STATES = {
+    "alabama", "alaska", "arizona", "arkansas", "california", "colorado",
+    "delaware", "florida", "georgia", "hawaii", "idaho", "illinois",
+    "indiana", "iowa", "kansas", "kentucky", "louisiana", "maine",
+    "maryland", "michigan", "minnesota", "mississippi", "missouri",
+    "montana", "nebraska", "nevada", "new jersey", "new mexico",
+    "new york", "north carolina", "north dakota", "ohio", "oklahoma",
+    "oregon", "pennsylvania", "south carolina", "south dakota",
+    "tennessee", "texas", "utah", "vermont", "virginia", "washington",
+    "west virginia", "wisconsin", "wyoming",
+}
+
+NON_TARGET_ABBREVS = {
+    "al", "ak", "az", "ar", "ca", "co", "de", "fl", "ga", "hi", "id",
+    "il", "in", "ia", "ks", "ky", "la", "me", "md", "mi", "mn", "ms",
+    "mo", "mt", "ne", "nv", "nj", "nm", "ny", "nc", "nd", "oh", "ok",
+    "or", "pa", "sc", "sd", "tn", "tx", "ut", "vt", "va", "wa", "wv",
+    "wi", "wy",
+}
+
+
 def is_in_target_state(job):
     """Return True if job location is in a target state, remote, or unspecified."""
+    import re
+
     loc = (job.get("location", {}).get("display_name") or "").lower().strip()
+    desc = (job.get("description") or "").lower()
+
+    # Combine location field + description for scanning
+    full_text = f"{loc} {desc}"
+
+    # Allow remote/unspecified
     if not loc or "remote" in loc or "anywhere" in loc:
+        # But still reject if description explicitly mentions a non-target state
+        for state in NON_TARGET_STATES:
+            if state in desc:
+                return False
+        for abbrev in NON_TARGET_ABBREVS:
+            if re.search(r'\b' + abbrev + r'\b', desc):
+                return False
         return True
-    for abbrev in TARGET_STATE_ABBREVS:
-        if f", {abbrev.lower()}" in loc or loc.endswith(f" {abbrev.lower()}"):
-            return True
+
+    # Reject if location or description mentions a non-target state
+    for state in NON_TARGET_STATES:
+        if state in full_text:
+            return False
+    for abbrev in NON_TARGET_ABBREVS:
+        if re.search(r'\b' + abbrev + r'\b', full_text):
+            return False
+
+    # Accept if target state name found
     for name in TARGET_STATE_NAMES:
-        if name in loc:
+        if name in full_text:
             return True
+
+    # Accept if target state abbreviation found (whole word only)
+    for abbrev in TARGET_STATE_ABBREVS:
+        if re.search(r'\b' + abbrev.lower() + r'\b', full_text):
+            return True
+
     return False
 
 
