@@ -95,38 +95,45 @@ def is_in_target_state(job):
     """Return True if job location is in a target state, remote, or unspecified."""
     loc = (job.get("location", {}).get("display_name") or "").lower().strip()
     desc = (job.get("description") or "").lower()
-    full_text = f"{loc} {desc}"
 
+    # Remote or no location — always accept (valid for target-state residents)
     if not loc or "remote" in loc or "anywhere" in loc:
-        # Scan description for full state names only — abbreviations like "or",
-        # "in", "me" are common English words and cause massive false rejections.
-        for state in NON_TARGET_STATES:
-            if state in desc:
-                return False
         return True
 
-    # Reject if description mentions a non-target state full name
-    for state in NON_TARGET_STATES:
-        if state in desc:
-            return False
+    # --- Check location field only (never description for rejection) ---
+    # Pharma job descriptions routinely mention non-target states in context
+    # (NJ/PA headquarters, FDA in Maryland, NY offices) — scanning them causes
+    # nearly every legitimate MA/CT/RI/NH job to be falsely rejected.
 
-    # Reject if the structured location field contains a non-target state abbreviation.
-    # Abbreviation check is scoped to loc only — never the description.
-    for abbrev in NON_TARGET_ABBREVS:
-        if re.search(r'\b' + abbrev + r'\b', loc):
-            return False
-
-    # Accept if target state name found anywhere
+    # Accept immediately if target state found in location string
     for name in TARGET_STATE_NAMES:
-        if name in full_text:
+        if name in loc:
             return True
-
-    # Accept if target state abbreviation found in location field
     for abbrev in TARGET_STATE_ABBREVS:
         if re.search(r'\b' + abbrev.lower() + r'\b', loc):
             return True
 
-    return False
+    # Reject if a non-target state is explicitly in the location string
+    for state in NON_TARGET_STATES:
+        if state in loc:
+            return False
+    for abbrev in NON_TARGET_ABBREVS:
+        if re.search(r'\b' + abbrev + r'\b', loc):
+            return False
+
+    # Location is generic ("united states", city-only, etc.) — no state info found.
+    # Scan description for TARGET state mentions to decide; default accept if
+    # neither found (could be a fully flexible/remote posting mislabelled).
+    for name in TARGET_STATE_NAMES:
+        if name in desc:
+            return True
+    for abbrev in TARGET_STATE_ABBREVS:
+        if re.search(r'\b' + abbrev.lower() + r'\b', desc):
+            return True
+
+    # Generic location with no state clue at all — accept rather than reject,
+    # since these are often national/remote postings open to target-state applicants.
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -323,15 +330,21 @@ def is_relevant(job):
     return any(t in title for t in validation_terms)
 
 
-def add_jobs(candidates, seen, jobs):
+def add_jobs(candidates, seen, jobs, label=""):
     """Deduplicate and filter candidates into jobs list."""
+    raw = len(candidates)
     added = 0
     for job in candidates:
         fid = job_fingerprint(job)
-        if fid not in seen and is_relevant(job) and is_in_target_state(job):
-            seen.add(fid)
-            jobs.append(job)
-            added += 1
+        if fid not in seen:
+            relevant = is_relevant(job)
+            in_state = is_in_target_state(job)
+            if relevant and in_state:
+                seen.add(fid)
+                jobs.append(job)
+                added += 1
+    if raw > 0 or label:
+        print(f"  [{label}] raw={raw} kept={added}")
     return added
 
 
@@ -347,27 +360,31 @@ def collect_all_jobs():
     print("Searching Adzuna (location-specific)...")
     for location in LOCATIONS:
         for query in SEARCH_QUERIES:
-            add_jobs(search_adzuna(query, location=location), seen, jobs)
+            add_jobs(search_adzuna(query, location=location), seen, jobs,
+                     label=f"Adzuna/{location[:4]}/{query[:20]}")
             time.sleep(0.3)
 
     # --- Adzuna: USA-wide (catches remote + any misclassified state) ---
     print("Searching Adzuna (USA-wide)...")
     for query in SEARCH_QUERIES:
-        add_jobs(search_adzuna(query), seen, jobs)
+        add_jobs(search_adzuna(query), seen, jobs,
+                 label=f"Adzuna/US/{query[:20]}")
         time.sleep(0.3)
 
     # --- Indeed RSS: location-specific (free) ---
     print("Searching Indeed RSS...")
     for location in LOCATIONS:
         for query in INDEED_RSS_QUERIES:
-            add_jobs(search_indeed_rss(query, location), seen, jobs)
+            add_jobs(search_indeed_rss(query, location), seen, jobs,
+                     label=f"Indeed/{location[:4]}/{query[:20]}")
             time.sleep(0.5)
 
     # --- BioSpace RSS: pharma-specific (free) ---
     print("Searching BioSpace RSS...")
     for location in LOCATIONS:
         for query in BIOSPACE_QUERIES:
-            add_jobs(search_biospace_rss(query, location), seen, jobs)
+            add_jobs(search_biospace_rss(query, location), seen, jobs,
+                     label=f"BioSpace/{location[:4]}/{query[:20]}")
             time.sleep(0.5)
 
     # --- Google Jobs via SerpAPI (optional) ---
@@ -375,7 +392,8 @@ def collect_all_jobs():
         print("Searching Google Jobs (SerpAPI)...")
         for query in GOOGLE_SEARCH_QUERIES:
             raw_results = search_google_jobs(query)
-            add_jobs([normalize_google_job(r) for r in raw_results], seen, jobs)
+            add_jobs([normalize_google_job(r) for r in raw_results], seen, jobs,
+                     label=f"Google/{query[:20]}")
             time.sleep(0.5)
     else:
         print("SERPAPI_KEY not set — skipping Google Jobs search.")
