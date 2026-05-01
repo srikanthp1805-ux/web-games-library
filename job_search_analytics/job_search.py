@@ -270,7 +270,7 @@ def search_adzuna(query: str, location: str = None) -> list:
         "app_key": ADZUNA_API_KEY,
         "results_per_page": 50,
         "what": query,
-        "max_days_old": 2,
+        "max_days_old": 3,
     }
     if location:
         params["where"] = location
