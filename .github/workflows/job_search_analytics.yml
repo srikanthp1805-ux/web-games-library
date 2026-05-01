@@ -2,7 +2,7 @@ name: Analytics Leadership Job Search
 
 on:
   schedule:
-    - cron: '0 12 * * 1-5'   # 8:00 AM EDT (UTC-4), Mon–Fri
+    - cron: '0 12 * * 1,3,5'  # 8:00 AM EDT (UTC-4), Mon/Wed/Fri only
   workflow_dispatch:          # manual trigger from GitHub Actions UI
 
 jobs:
