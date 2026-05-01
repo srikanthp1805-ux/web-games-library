@@ -28,4 +28,5 @@ jobs:
           GMAIL_USER:         ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           RECIPIENT_EMAIL:    ${{ secrets.RECIPIENT_EMAIL }}
+          SERPAPI_KEY:        ${{ secrets.SERPAPI_KEY }}
         run: python job_search_analytics/job_search.py

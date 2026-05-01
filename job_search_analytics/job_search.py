@@ -17,6 +17,7 @@ GMAIL_APP_PASSWORD = os.environ["GMAIL_APP_PASSWORD"]
 RECIPIENT_EMAILS   = [
     e.strip() for e in os.environ.get("RECIPIENT_EMAIL", GMAIL_USER).split(",")
 ]
+SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "")
 
 ADZUNA_BASE = "https://api.adzuna.com/v1/api/jobs/us/search"
 
@@ -146,6 +147,15 @@ WORKDAY_SITES = [
     {"name": "Planet Fitness",        "tenant": "planetfitness", "site": "PlanetFitnessCareers"},
 ]
 WORKDAY_SEARCH_TERMS = ["analytics", "business intelligence", "data analyst"]
+
+# ── Google Jobs queries (SerpAPI — optional, 100 free credits/month) ───────────
+# Kept to 4 queries × 3 runs/week = ~48/month — stays within free tier
+GOOGLE_QUERIES = [
+    "Director of Analytics Boston MA",
+    "Principal Data Analyst Boston remote",
+    "Head of Analytics Massachusetts",
+    "Senior Manager Business Intelligence Boston",
+]
 
 _WORKDAY_HEADERS = {
     "Content-Type": "application/json",
@@ -367,6 +377,48 @@ def search_workday(site_cfg: dict, term: str) -> list:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Source: Google Jobs via SerpAPI (optional)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def search_google_jobs(query: str) -> list:
+    if not SERPAPI_KEY:
+        return []
+    params = {
+        "engine":   "google_jobs",
+        "q":        query,
+        "api_key":  SERPAPI_KEY,
+        "chips":    "date_posted:3days",
+        "location": "Boston, Massachusetts, United States",
+    }
+    try:
+        resp = requests.get("https://serpapi.com/search.json", params=params, timeout=15)
+        resp.raise_for_status()
+        return resp.json().get("jobs_results", [])
+    except Exception as e:
+        print(f"  [WARN] Google Jobs '{query}': {e}")
+        return []
+
+
+def _normalize_google_job(raw: dict) -> dict:
+    apply_options = raw.get("apply_options") or []
+    url           = apply_options[0].get("link", "#") if apply_options else "#"
+    extensions    = raw.get("detected_extensions") or {}
+    return {
+        "id":       None,
+        "title":    raw.get("title", ""),
+        "company":  {"display_name": raw.get("company_name", "")},
+        "location": {"display_name": raw.get("location", "")},
+        "redirect_url": url,
+        "created":  extensions.get("posted_at", ""),
+        "salary_min":   None,
+        "salary_max":   None,
+        "_salary_text": extensions.get("salary", ""),
+        "_source":  "Google Jobs",
+        "description":  raw.get("description", ""),
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Collection orchestrator
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -412,6 +464,15 @@ def collect_all_jobs() -> list:
         for term in WORKDAY_SEARCH_TERMS:
             add_jobs(search_workday(site, term), seen, jobs, f"WD/{site['name'][:12]}/{term[:10]}")
             time.sleep(0.5)
+
+    if SERPAPI_KEY:
+        print("── Google Jobs (SerpAPI) ──")
+        for q in GOOGLE_QUERIES:
+            raw = search_google_jobs(q)
+            add_jobs([_normalize_google_job(r) for r in raw], seen, jobs, f"Google/{q[:25]}")
+            time.sleep(1.0)
+    else:
+        print("SERPAPI_KEY not set — skipping Google Jobs.")
 
     return jobs
 
