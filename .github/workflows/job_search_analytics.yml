@@ -1,0 +1,31 @@
+name: Analytics Leadership Job Search
+
+on:
+  schedule:
+    - cron: '0 12 * * 1-5'   # 8:00 AM EDT (UTC-4), Mon–Fri
+  workflow_dispatch:          # manual trigger from GitHub Actions UI
+
+jobs:
+  search-and-notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r job_search_analytics/requirements.txt
+
+      - name: Run analytics job search agent
+        env:
+          ADZUNA_APP_ID:      ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_API_KEY:     ${{ secrets.ADZUNA_API_KEY }}
+          GMAIL_USER:         ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          RECIPIENT_EMAIL:    ${{ secrets.RECIPIENT_EMAIL }}
+        run: python job_search_analytics/job_search.py
