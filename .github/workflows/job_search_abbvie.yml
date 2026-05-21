@@ -1,0 +1,32 @@
+name: AbbVie Validation Job Search (Massachusetts)
+
+on:
+  schedule:
+    - cron: '0 13 * * 1-5'   # 9:00 AM EDT (UTC-4), Mon–Fri once daily
+  workflow_dispatch:          # manual trigger from GitHub Actions UI
+
+jobs:
+  search-and-notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r job_search_abbvie/requirements.txt
+
+      - name: Run AbbVie job search agent
+        env:
+          ADZUNA_APP_ID:      ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_API_KEY:     ${{ secrets.ADZUNA_API_KEY }}
+          GMAIL_USER:         ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          RECIPIENT_EMAIL:    ${{ secrets.RECIPIENT_EMAIL }}
+          SERPAPI_KEY:        ${{ secrets.SERPAPI_KEY }}
+        run: python job_search_abbvie/job_search.py
