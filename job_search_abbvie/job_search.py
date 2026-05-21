@@ -244,7 +244,12 @@ def search_abbvie_phenom(search_text):
                 title = title_city.replace('-', ' ').title()
                 city  = ""
 
-            location_display = f"{city}, {state_abbrev}" if city else state_abbrev
+            state_full = {
+                "MA": "Massachusetts", "NH": "New Hampshire", "RI": "Rhode Island",
+                "CT": "Connecticut", "NY": "New York", "NJ": "New Jersey",
+                "CA": "California", "IL": "Illinois", "TX": "Texas",
+            }.get(state_abbrev, state_abbrev)
+            location_display = f"{city}, {state_full}" if city else state_full
 
             jobs.append({
                 "id": jid,
