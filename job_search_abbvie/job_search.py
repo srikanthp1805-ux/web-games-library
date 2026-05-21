@@ -229,11 +229,16 @@ def search_abbvie_phenom(search_text):
                 continue
             seen_jids.add(jid)
 
-            # Strip trailing state abbreviation: "...-in-cambridge-ma" → state="MA"
+            # Strip trailing 2-char code: "...-in-cambridge-ma" → state="MA"
             m2 = re.match(r'^(.*)-([a-z]{2})$', slug_body)
             if not m2:
                 continue
             title_city, state_abbrev = m2.group(1), m2.group(2).upper()
+
+            # Skip non-US / non-MA jobs — international URLs use country/county
+            # codes that are not US state abbreviations (e.g. "SO" for Sligo, Ireland)
+            if state_abbrev not in TARGET_STATE_ABBREVS:
+                continue
 
             # Split on last "-in-" to separate title from city
             in_idx = title_city.rfind('-in-')
