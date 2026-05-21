@@ -172,15 +172,15 @@ def is_relevant(job):
 
 
 # ---------------------------------------------------------------------------
-# AbbVie Direct (Workday)
+# AbbVie Direct (Phenom career site — https://careers.abbvie.com)
 # ---------------------------------------------------------------------------
+# AbbVie uses Phenom, not Workday. The site is server-side rendered;
+# job URLs encode city+state: /en/job/[title]-in-[city]-[state]-jid-[id]
+# so we parse state directly from the href without needing an API key.
 
-ABBVIE_WORKDAY_URL = (
-    "https://abbvie.wd3.myworkdayjobs.com"
-    "/wday/cxs/abbvie/External_career_site/jobs"
-)
+ABBVIE_PHENOM_BASE = "https://careers.abbvie.com"
 
-ABBVIE_VALIDATION_QUERIES = [
+ABBVIE_DIRECT_QUERIES = [
     "validation engineer",
     "validation associate",
     "validation specialist",
@@ -196,49 +196,73 @@ ABBVIE_VALIDATION_QUERIES = [
     "quality control",
 ]
 
-def search_abbvie_workday(search_text):
-    payload = {
-        "appliedFacets": {},
-        "limit": 20,
-        "offset": 0,
-        "searchText": search_text,
-    }
+
+def search_abbvie_phenom(search_text):
+    """Scrape AbbVie Phenom careers page and parse job links from HTML."""
+    url = (
+        f"{ABBVIE_PHENOM_BASE}/en/jobs/"
+        f"?q={requests.utils.quote(search_text)}&pagesize=50"
+    )
     headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml",
     }
     try:
-        resp = requests.post(
-            ABBVIE_WORKDAY_URL, json=payload, headers=headers, timeout=15
-        )
+        resp = requests.get(url, headers=headers, timeout=15)
         resp.raise_for_status()
-        data = resp.json()
+        html = resp.text
+
         jobs = []
-        for item in data.get("jobPostings", []):
-            title = item.get("title", "")
-            loc_raw = item.get("locationsText", "")
-            external_path = item.get("externalPath", "")
-            posted = item.get("postedOn", "")[:10]
-            url = (
-                f"https://abbvie.wd3.myworkdayjobs.com/en-US/External_career_site{external_path}"
-                if external_path else "https://abbvie.wd3.myworkdayjobs.com/en-US/External_career_site"
-            )
+        seen_jids = set()
+
+        # Each job link: /en/job/[title-slug]-in-[city-slug]-[state]-jid-[id]
+        for href in re.findall(r'href=["\']?(/en/job/[^"\'>\s]+)["\']?', html):
+            m = re.match(r'/en/job/(.*)-jid-(\d+)', href)
+            if not m:
+                continue
+            slug_body, jid = m.group(1), m.group(2)
+            if jid in seen_jids:
+                continue
+            seen_jids.add(jid)
+
+            # Strip trailing state abbreviation: "...-in-cambridge-ma" → state="MA"
+            m2 = re.match(r'^(.*)-([a-z]{2})$', slug_body)
+            if not m2:
+                continue
+            title_city, state_abbrev = m2.group(1), m2.group(2).upper()
+
+            # Split on last "-in-" to separate title from city
+            in_idx = title_city.rfind('-in-')
+            if in_idx >= 0:
+                title = title_city[:in_idx].replace('-', ' ').title()
+                city  = title_city[in_idx + 4:].replace('-', ' ').title()
+            else:
+                title = title_city.replace('-', ' ').title()
+                city  = ""
+
+            location_display = f"{city}, {state_abbrev}" if city else state_abbrev
+
             jobs.append({
-                "id": external_path or None,
+                "id": jid,
                 "title": title,
                 "company": {"display_name": "AbbVie"},
-                "location": {"display_name": loc_raw},
-                "redirect_url": url,
-                "created": posted,
+                "location": {"display_name": location_display},
+                "redirect_url": f"{ABBVIE_PHENOM_BASE}{href}",
+                "created": "",
                 "salary_min": None,
                 "salary_max": None,
                 "_salary_text": "",
                 "_source": "AbbVie Careers",
-                "description": item.get("jobRequisitionId", ""),
+                "description": "",
             })
+
         return jobs
     except Exception as e:
-        print(f"  [WARN] AbbVie Workday '{search_text}': {e}")
+        print(f"  [WARN] AbbVie Phenom '{search_text}': {e}")
         return []
 
 
@@ -423,12 +447,12 @@ def collect_all_jobs():
     seen = set()
     jobs = []
 
-    # --- AbbVie Careers direct (Workday) ---
-    print("Searching AbbVie Careers (Workday)...")
-    for query in ABBVIE_VALIDATION_QUERIES:
-        candidates = search_abbvie_workday(query)
+    # --- AbbVie Careers direct (Phenom) ---
+    print("Searching AbbVie Careers (Phenom direct)...")
+    for query in ABBVIE_DIRECT_QUERIES:
+        candidates = search_abbvie_phenom(query)
         add_jobs(candidates, seen, jobs, label=f"AbbVieDirect/{query[:20]}")
-        time.sleep(0.5)
+        time.sleep(1.0)
 
     # --- Adzuna: Massachusetts + USA-wide ---
     print("Searching Adzuna (Massachusetts)...")
