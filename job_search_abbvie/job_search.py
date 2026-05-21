@@ -565,6 +565,8 @@ def build_html(jobs):
             elif job.get("_salary_text"):
                 salary = job["_salary_text"]
 
+            state = location.split(", ")[-1] if ", " in location else ""
+
             html += f"""
 <div style="margin-bottom:18px;padding:16px;border:1px solid #e0e0e0;border-radius:6px;background:#fafafa;">
   <h3 style="margin:0 0 6px 0;font-size:16px;">
@@ -572,6 +574,7 @@ def build_html(jobs):
   </h3>
   <p style="margin:3px 0;font-size:14px;"><b>Company:</b> {company}</p>
   <p style="margin:3px 0;font-size:14px;"><b>Location:</b> {location}</p>
+  {"<p style='margin:3px 0;font-size:14px;'><b>State:</b> " + state + "</p>" if state else ""}
   {"<p style='margin:3px 0;font-size:14px;'><b>Salary:</b> " + salary + "</p>" if salary else ""}
   {"<p style='margin:3px 0;font-size:14px;color:#888;'>Posted: " + created + "</p>" if created else ""}
   <p style="margin:3px 0;font-size:12px;color:#aaa;">Source: {source}</p>
